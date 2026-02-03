@@ -7,7 +7,7 @@ Get up and running with LangChain, Ollama, and GPT-3.5 in minutes!
 ### Step 1: Run Automated Setup
 
 ```bash
-cd docs/installation/ubuntu-22.04-langchain-setup/
+cd agents/programming/ubuntu\ 22.04\ LTS\ \(ali\ server\)/
 
 # Install system dependencies (requires sudo)
 sudo ./install_dependencies.sh
