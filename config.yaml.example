@@ -1,0 +1,115 @@
+# Global configuration for Mimosa-Flytrap AI Agents
+
+global:
+  # Logging configuration
+  log_level: INFO
+  log_file: logs/app.log
+  
+  # Cache settings
+  cache_enabled: true
+  cache_dir: .cache
+  cache_ttl: 3600  # seconds
+  
+  # Timeout settings
+  timeout: 30  # seconds
+  retry_attempts: 3
+  retry_delay: 1  # seconds
+
+# AI Model Providers
+providers:
+  openai:
+    api_key: ${OPENAI_API_KEY}
+    default_model: gpt-4
+    temperature: 0.7
+    max_tokens: 2048
+    top_p: 1
+    frequency_penalty: 0
+    presence_penalty: 0
+    
+  anthropic:
+    api_key: ${ANTHROPIC_API_KEY}
+    default_model: claude-3-sonnet-20240229
+    temperature: 0.7
+    max_tokens: 4096
+    
+  huggingface:
+    api_key: ${HUGGINGFACE_API_KEY}
+    cache_dir: .cache/huggingface
+    local_files_only: false
+
+# Agent-specific configurations
+agents:
+  programming:
+    code_generation:
+      model: gpt-4
+      temperature: 0.2
+      max_tokens: 4096
+      
+    code_review:
+      model: claude-3-sonnet-20240229
+      temperature: 0.3
+      max_tokens: 2048
+      
+    test_generation:
+      model: gpt-3.5-turbo
+      temperature: 0.5
+      max_tokens: 2048
+      
+  document_processing:
+    summarization:
+      model: gpt-4
+      temperature: 0.5
+      max_length: 1024
+      
+    extraction:
+      model: gpt-3.5-turbo
+      temperature: 0.2
+      
+    translation:
+      model: gpt-4
+      temperature: 0.3
+      
+  image_processing:
+    generation:
+      model: stable-diffusion-xl
+      steps: 50
+      guidance_scale: 7.5
+      
+    analysis:
+      model: clip-vit-large
+      batch_size: 8
+
+# Performance settings
+performance:
+  # Parallel processing
+  max_workers: 4
+  thread_pool_size: 8
+  process_pool_size: 4
+  
+  # Batch processing
+  batch_size: 10
+  prefetch_factor: 2
+  
+  # GPU settings
+  gpu_enabled: true
+  gpu_device: cuda:0
+  gpu_memory_fraction: 0.8
+  mixed_precision: true
+  
+  # Memory optimization
+  use_8bit_quantization: false
+  use_4bit_quantization: false
+
+# Security settings
+security:
+  # Rate limiting
+  rate_limit_enabled: true
+  max_requests_per_minute: 60
+  
+  # Input validation
+  max_input_length: 100000
+  sanitize_inputs: true
+  
+  # Data privacy
+  anonymize_logs: true
+  secure_api_keys: true
