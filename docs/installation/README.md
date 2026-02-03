@@ -148,6 +148,20 @@ az container create \
 
 ## Environment-Specific Guides
 
+### Ubuntu 22.04 LTS - LangChain Setup
+
+For a complete guide to setting up LangChain with Ollama and GPT-3.5 on Ubuntu 22.04 LTS:
+
+📚 **[Ubuntu 22.04 LTS LangChain Environment Setup Guide](ubuntu-22.04-langchain-setup/README.md)**
+
+This comprehensive guide includes:
+- System dependencies installation
+- Ollama local LLM setup
+- LangChain framework configuration
+- OpenAI GPT-3.5 integration
+- Automated setup scripts
+- Example AI agent implementation
+
 ### GPU Support
 
 For CUDA support (NVIDIA GPUs):
