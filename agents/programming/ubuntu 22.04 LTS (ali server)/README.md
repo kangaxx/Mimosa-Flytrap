@@ -52,7 +52,7 @@ For a rapid setup, run the automated installation scripts:
 
 ```bash
 # Navigate to this directory
-cd examples/programming/ubuntu\ 22.04\ LTS\(阿里服务器\)/
+cd agents/programming/ubuntu\ 22.04\ LTS\ \(ali\ server\)/
 
 # Run the complete setup (requires sudo)
 chmod +x install_dependencies.sh setup_ollama.sh setup_environment.sh
