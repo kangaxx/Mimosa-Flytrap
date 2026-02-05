@@ -7,6 +7,7 @@
 # LangChain-based AI agents with Ollama and GPT-3.5 integration.
 #
 # Usage: sudo ./install_dependencies.sh
+# 2026 02 05
 ###############################################################################
 
 set -e  # Exit on error
