@@ -1,0 +1,6 @@
+langchain
+python-dotenv
+requests
+openai
+# optional: if you have a local ollama integration package, add it here
+# ollama-client
