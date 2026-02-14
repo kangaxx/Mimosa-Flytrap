@@ -1,24 +1,11 @@
 #!/usr/bin/env python3
-"""Interactive Programming Agent (Full-stack engineer role)
+"""Interactive Programming Agent for Windows 11
 
-Features:
-- Uses local Ollama as LLM backend (via OLLAMA_BASE_URL)
-- Uses Deepseek-r1 embeddings via HTTP (DEEPSEEK_API_URL)
-- Provides tools: shell executor, file read/write, embeddings lookup
-- Interactive loop that requests confirmation before destructive shell commands
-
-Usage:
-  python run_programming_agent.py            # interactive mode
-  python run_programming_agent.py --task "Implement X"  # single-run
-
-Security:
-- This script can execute shell commands on your machine. In interactive
-  mode it asks for confirmation before shell execution. Use `--auto` to
-  allow non-interactive runs (only for trusted environments).
+This file mirrors the Unix example but is placed here for convenience when
+running on Windows. It supports Ollama and deepseek-r1 via HTTP.
 """
 import os
 import json
-import shlex
 import argparse
 import subprocess
 from typing import List, Any
@@ -71,7 +58,6 @@ class FullStackAgent:
         r = requests.post(url, json=payload, timeout=60)
         r.raise_for_status()
         data = r.json()
-        # Ollama's response shape can vary; try to extract text
         if isinstance(data, dict) and "choices" in data:
             txt = data["choices"][0].get("text") or data["choices"][0].get("message", {}).get("content")
             return txt
@@ -92,9 +78,8 @@ class FullStackAgent:
             f.write(content)
 
     def execute_shell(self, cmd: str) -> dict:
-        # Ask for confirmation if interactive and potentially destructive
-        destructive_keywords = ["rm ", "rm-", "sudo ", "shutdown", "reboot", "mkfs", "dd "]
-        if not self.auto and any(k in cmd for k in destructive_keywords):
+        destructive_keywords = ["Remove-Item", "Format-Volume", "shutdown", "restart-computer"]
+        if not self.auto and any(k.lower() in cmd.lower() for k in destructive_keywords):
             ans = input(f"Command appears destructive. Confirm execute? [y/N]: ")
             if ans.strip().lower() != "y":
                 return {"cmd": cmd, "status": "skipped", "output": "user declined"}
@@ -112,21 +97,14 @@ SYSTEM_PROMPT = (
     "read(path) -> returns file contents; write(path, content) -> writes file; embed(texts) -> returns embeddings.\n"
     "When you want to use a tool, return a single JSON object with an 'actions' array. "
     "Each action is an object with 'type' and 'args'. Types: 'shell','read','write','embed','message'.\n"
-    "Example:\n{"
-    "\"actions\": [\n"
-    "  {\"type\": \"shell\", \"args\": {\"cmd\": \"ls -la\"}},\n"
-    "  {\"type\": \"message\", \"args\": {\"text\": \"Done\"}}\n"
-    "]}\n"
 )
 
 
 def try_parse_json(s: str):
     s = s.strip()
-    # Try to find a JSON object in text
     try:
         return json.loads(s)
     except Exception:
-        # attempt to extract first { ... }
         start = s.find("{")
         end = s.rfind("}")
         if start != -1 and end != -1 and end > start:
@@ -158,49 +136,31 @@ def interactive_loop(agent: FullStackAgent):
             continue
 
         actions = parsed.get("actions", [])
-        results = []
         for a in actions:
             t = a.get("type")
             args = a.get("args", {})
             if t == "shell":
-                cmd = args.get("cmd")
-                res = agent.execute_shell(cmd)
-                print(json.dumps(res, indent=2, ensure_ascii=False))
-                results.append(res)
+                print(json.dumps(agent.execute_shell(args.get("cmd")), indent=2, ensure_ascii=False))
             elif t == "read":
-                path = args.get("path")
                 try:
-                    content = agent.read_file(path)
-                    print(f"--- content of {path} ---\n", content)
-                    results.append({"path": path, "content": content})
+                    print(agent.read_file(args.get("path")))
                 except Exception as e:
                     print("read error:", e)
-                    results.append({"path": path, "error": str(e)})
             elif t == "write":
-                path = args.get("path")
-                content = args.get("content", "")
                 try:
-                    agent.write_file(path, content)
-                    print(f"Wrote {path}")
-                    results.append({"path": path, "status": "written"})
+                    agent.write_file(args.get("path"), args.get("content", ""))
+                    print("wrote", args.get("path"))
                 except Exception as e:
                     print("write error:", e)
-                    results.append({"path": path, "error": str(e)})
             elif t == "embed":
-                texts = args.get("texts", [])
                 try:
-                    emb = agent.embed_texts(texts)
-                    print("Embeddings result:", emb)
-                    results.append({"embeddings": emb})
+                    print(agent.embed_texts(args.get("texts", [])))
                 except Exception as e:
                     print("embed error:", e)
-                    results.append({"error": str(e)})
             elif t == "message":
                 print(args.get("text", ""))
-                results.append({"message": args.get("text", "")})
             else:
-                print("Unknown action type:", t)
-                results.append({"unknown": a})
+                print("unknown action", a)
 
 
 def run_single_task(agent: FullStackAgent, task: str):

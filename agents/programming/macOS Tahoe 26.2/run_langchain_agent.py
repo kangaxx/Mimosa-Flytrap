@@ -34,7 +34,7 @@ class DeepseekEmbeddings:
         resp = requests.post(
             self.url,
             headers={"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"},
-            json={"model": os.environ.get("DEEPSEEK_MODEL", "deepseek-r1"), "input": texts},
+            json={"model": os.environ.get("DEEPSEEK_MODEL", "deepseek-r1:8b"), "input": texts},
             timeout=30,
         )
         resp.raise_for_status()

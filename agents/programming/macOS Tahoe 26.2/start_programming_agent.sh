@@ -10,4 +10,17 @@ if [ -f "${VENV}/bin/activate" ]; then
 fi
 
 echo "Starting programming agent (interactive). Use --auto for non-interactive runs."
-python run_programming_agent.py "$@"
+
+# Find a usable python executable (prefer python then python3)
+PY_CMD=""
+if command -v python >/dev/null 2>&1; then
+  PY_CMD=python
+elif command -v python3 >/dev/null 2>&1; then
+  PY_CMD=python3
+else
+  echo "Error: no python interpreter found. Install Python 3 (for example via Homebrew):"
+  echo "  brew install python"
+  exit 1
+fi
+
+"${PY_CMD}" run_programming_agent.py "$@"
