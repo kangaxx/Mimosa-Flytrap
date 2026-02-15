@@ -277,6 +277,42 @@ python examples/programming/01_code_generation.py
 python examples/programming/run_all.py
 ```
 
+GUI demo
+--------
+
+There is a simple Tkinter GUI that calls the local Ollama demo and displays
+results: `examples/programming/gui_ollama_demo.py`.
+
+Run it with:
+
+```bash
+python examples/programming/gui_ollama_demo.py
+```
+
+Packaging to macOS executable
+----------------------------
+
+You can build a macOS executable bundle using `pyinstaller`. A helper script
+is provided: `examples/programming/build_mac_app.sh`.
+
+Basic steps (macOS):
+
+```bash
+# Make the build script executable
+chmod +x examples/programming/build_mac_app.sh
+# Run it (creates a dist/ folder)
+./examples/programming/build_mac_app.sh
+```
+
+Notes:
+- The script will create a virtualenv (if not present), install `pyinstaller`,
+    and run `pyinstaller --windowed --onefile` to produce a single macOS
+    executable. The produced artifact will be in `dist/` under the examples
+    directory. For production distribution you may want to code-sign and
+    notarize the app (Apple requirements).
+- If your environment uses a different Python interpreter, run the script
+    with that interpreter or activate your virtualenv first.
+
 ## Configuration
 
 Examples use the configuration from `docs/configuration/programming/`.
@@ -287,3 +323,37 @@ Examples use the configuration from `docs/configuration/programming/`.
 - Explore agent parameters
 - Check performance tuning options
 - Review best practices documentation
+
+GUI & macOS packaging
+---------------------
+
+This repository includes a small Tkinter GUI for the local Ollama demo: `examples/programming/gui_ollama_demo.py`.
+
+Run the GUI locally:
+
+```bash
+python examples/programming/gui_ollama_demo.py
+```
+
+Build a macOS executable using PyInstaller
+-----------------------------------------
+
+A helper script `build_mac_app.sh` is provided to create a macOS app/executable using PyInstaller. It will:
+
+- create a temporary virtualenv (if not present)
+- install `pyinstaller`
+- run PyInstaller to build a windowed app that bundles the GUI script and the demo module
+
+To build (run from repository root):
+
+```bash
+chmod +x examples/programming/build_mac_app.sh
+examples/programming/build_mac_app.sh
+```
+
+After success, the artifact will be under `examples/programming/dist/` (either a `.app` bundle or an executable named `OllamaLocalDemo`).
+
+Notes
+- The build script installs `pyinstaller` into a virtualenv inside the `examples/programming` folder. Remove the venv when done if desired.
+- If you need a signed macOS `.app` for distribution, sign the `.app` bundle with your developer certificate after building.
+- The GUI expects `02_ollama_local_demo.py` to be next to it. The build script attempts to include it, but verify the built app can access the demo module.
