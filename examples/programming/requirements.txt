@@ -1,0 +1,3 @@
+# Requirements for the GUI demo and packaging
+requests>=2.31.0
+pyinstaller>=6.19.0

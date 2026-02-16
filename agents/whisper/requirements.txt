@@ -1,0 +1,8 @@
+# Requirements for agents/whisper examples
+faster-whisper
+pyttsx3
+TTS
+torch
+
+# Optional: specify CUDA builds of torch if using GPU, e.g.:
+# torch==2.2.0+cu118 -f https://download.pytorch.org/whl/torch_stable.html

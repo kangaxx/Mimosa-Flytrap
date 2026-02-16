@@ -20,7 +20,6 @@ from __future__ import annotations
 import os
 import json
 import argparse
-import shlex
 import subprocess
 from typing import Any, Dict
 
@@ -39,15 +38,15 @@ def build_payload(prompt: str, model: str, temperature: float, max_tokens: int) 
     }
 
 
-def call_with_requests(url: str, headers: Dict[str, str], payload: Dict[str, Any]) -> Dict[str, Any]:
+def call_with_requests(url: str, headers: Dict[str, str], payload: Dict[str, Any], timeout: int = 120) -> Dict[str, Any]:
     import requests
 
-    resp = requests.post(url, headers=headers, json=payload, timeout=120)
+    resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
     resp.raise_for_status()
     return resp.json()
 
 
-def call_with_curl(url: str, headers: Dict[str, str], payload: Dict[str, Any]) -> Dict[str, Any]:
+def call_with_curl(url: str, headers: Dict[str, str], payload: Dict[str, Any], timeout: int = 120) -> Dict[str, Any]:
     # Build curl command similar to the user's example
     hdrs = []
     for k, v in headers.items():
@@ -56,7 +55,7 @@ def call_with_curl(url: str, headers: Dict[str, str], payload: Dict[str, Any]) -
     data = json.dumps(payload, ensure_ascii=False)
     cmd = ["curl", "-sS", url, *hdrs, "-d", data]
 
-    completed = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    completed = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     if completed.returncode != 0:
         raise RuntimeError(f"curl failed: {completed.stderr.strip()}")
     return json.loads(completed.stdout)
