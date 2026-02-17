@@ -51,6 +51,12 @@ python agents/whisper/tts_pyttsx3.py --text "你好，世界" --output out.wav
 - 在无 GPU 的情况下，选择小型或基础模型（如 `small`、`base`）以降低内存占用。
 - 若需更高质量的 TTS，参考 Coqui TTS 官方文档并替换示例脚本。
 
+- 本地模型下载（关键步骤）：如果你已使用 Git 克隆模型快照，可以用以下命令获取 CTranslate2 格式的模型：
+  ```bash
+  git clone https://huggingface.co/guillaumekln/faster-whisper-small
+  ```
+  注意：该操作通常需要已安装并启用 `git lfs`，克隆完成后在运行脚本时将 `--model` 指向克隆得到的本地目录（例如 `/Users/huangxuling/models/faster-whisper-small`）。
+
 更多帮助
 如需我把 `whisper.cpp` 或 `Coqui TTS` 的完整本地部署示例也加入此目录，告诉我即可。 
  
