@@ -40,9 +40,13 @@ def build_payload(prompt: str, model: str, temperature: float, max_tokens: int) 
 
 def call_with_requests(url: str, headers: Dict[str, str], payload: Dict[str, Any], timeout: int = 120) -> Dict[str, Any]:
     import requests
-
     resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
-    resp.raise_for_status()
+    try:
+        resp.raise_for_status()
+    except Exception as e:
+        # include response body to aid debugging (status and server message)
+        body = resp.text if resp is not None else ''
+        raise RuntimeError(f"HTTP {resp.status_code}: {body}") from e
     return resp.json()
 
 

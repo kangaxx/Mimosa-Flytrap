@@ -7,6 +7,26 @@ This document explains how to configure, run, and package the `gui_ollama_demo.p
 - Ollama installed and running locally (default HTTP API: `http://127.0.0.1:11434`).
 - Python modules: `requests` (the demo prefers `requests`, with `curl` as fallback). The project packaging script installs `pyinstaller` in a build venv.
 
+Optional (voice/STT/TTS) dependencies
+- For local STT/TTS features (Record / Transcribe / Speak), install the extra Python packages into the build venv or your active virtualenv. From this repository root you can run:
+
+```bash
+# use the packaged venv used by the GUI build (recommended for packaging):
+examples/programming/.venv_build/bin/python -m pip install --upgrade pip
+examples/programming/.venv_build/bin/python -m pip install faster-whisper sounddevice soundfile numpy pyttsx3
+
+# or, if you prefer a development venv:
+python3 -m venv .venv
+source .venv/bin/activate
+pip install faster-whisper sounddevice soundfile numpy pyttsx3
+```
+
+- Note: `playsound` is optional and may fail to build on some macOS/Python setups; the GUI falls back to macOS `say`/`afplay` when available. If a wheel/build fails for a package, consult the package README (for native libs you may need Xcode command-line tools or Homebrew packages).
+
+Voice/STT model notes
+- If you plan to use the faster-whisper based STT features, you can point the GUI `Model` field to a local faster-whisper model directory (a `model.bin` plus `config.json`/`tokenizer.json`). See the agents whisper README for details on model layout and supported formats: [agents/whisper/README.md](agents/whisper/README.md#L1).
+
+
 ## Files
 - `gui_ollama_demo.py` — the Tkinter GUI application.
 - `02_ollama_local_demo.py` — the demo module the GUI loads dynamically; contains `build_payload`, `call_with_requests`, and `call_with_curl` helpers.
