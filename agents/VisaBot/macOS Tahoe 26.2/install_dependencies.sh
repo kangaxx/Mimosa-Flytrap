@@ -8,6 +8,10 @@ if command -v brew >/dev/null 2>&1; then
   brew update || true
   echo "Installing python@3.11 and curl"
   brew install python@3.11 curl || true
+
+  # Playwright browser dependencies (helps avoid missing dylib/font issues)
+  echo "Installing Playwright runtime deps (fonts, certificates)"
+  brew install --cask font-noto-sans-cjk || true
 else
   echo "Homebrew not found. Please install Homebrew first: https://brew.sh/"
   exit 1

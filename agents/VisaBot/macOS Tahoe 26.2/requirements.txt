@@ -1,1 +1,10 @@
 requests>=2.32.0
+
+# Env file loader
+python-dotenv
+
+# AutoGen (pyautogen 0.10+ import names: autogen_agentchat, autogen_core)
+pyautogen
+
+# Browser automation
+playwright

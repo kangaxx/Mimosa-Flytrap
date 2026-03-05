@@ -14,6 +14,14 @@ chmod +x setup_environment.sh
 ./setup_environment.sh
 ```
 
+说明：该脚本会自动安装 AutoGen（pyautogen）与 Playwright，并默认下载 Playwright 的 Chromium 浏览器。
+
+如需安装全部浏览器（Chromium/Firefox/WebKit）：
+
+```bash
+PLAYWRIGHT_BROWSERS=all ./setup_environment.sh
+```
+
 ## 3) 配置环境变量
 
 首次执行 `setup_environment.sh` 会自动生成 `.env`。
@@ -32,6 +40,18 @@ chmod +x test_setup.sh
 ./test_setup.sh
 ```
 
+默认不强制请求 Ollama/OpenAI（避免因服务未启动导致失败）。如需做端到端模型连通性检查：
+
+```bash
+RUN_LLM_SMOKE_TEST=1 ./test_setup.sh
+```
+
+可选：你也可以用下面命令快速激活虚拟环境（注意必须用 source）：
+
+```bash
+source ./activate_venv.sh
+```
+
 ## 5) 启动 VisaBot
 
 交互模式：
@@ -46,6 +66,24 @@ chmod +x start_visabot.sh
 ```bash
 ./start_visabot.sh --question "我申请旅游签证通常要准备哪些材料？"
 ```
+
+## 6) （可选）用 Playwright 打开 TLS 网页
+
+打开浏览器窗口（推荐：需要手动通过机器人验证，然后脚本会尝试选择上海）：
+
+```bash
+source ./.venv/bin/activate
+python open_tls_page.py --no-headless --city Shanghai
+```
+
+Headless 打开并截图（适合无验证码页面；如有验证码建议用上面命令）：
+
+```bash
+source ./.venv/bin/activate
+python open_tls_page.py --wait-until commit --screenshot tls.png --screenshot-timeout-ms 10000
+```
+
+说明：脚本不会绕过 CAPTCHA/机器人验证；需要你在浏览器里手动完成验证后回到终端按回车继续。
 
 ## 后续操作建议
 

@@ -16,7 +16,16 @@ else
 fi
 
 source .venv/bin/activate
-python -c "import requests; print('Python deps OK')"
-python run_visabot.py --question "请用三句话介绍你能做什么" >/dev/null
+python -c "import requests; print('requests OK')"
+python -c "import autogen_agentchat; print('autogen_agentchat OK')"
+python -c "import autogen_core; print('autogen_core OK')"
+python -c "from playwright.sync_api import sync_playwright; print('playwright OK')"
+
+if [ "${RUN_LLM_SMOKE_TEST:-0}" = "1" ]; then
+  echo "Running optional LLM smoke test (RUN_LLM_SMOKE_TEST=1)"
+  python run_visabot.py --question "请用三句话介绍你能做什么" >/dev/null
+else
+  echo "Skipping LLM smoke test. Set RUN_LLM_SMOKE_TEST=1 to enable."
+fi
 
 echo "All checks passed"
