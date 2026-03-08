@@ -1,11 +1,14 @@
 package com.mimosa.server.controller;
 
 import com.mimosa.server.model.AuthRequest;
+import com.mimosa.server.model.LoginRecord;
 import com.mimosa.server.model.TokenResponse;
 import com.mimosa.server.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -51,5 +54,11 @@ public class AuthController {
             return ResponseEntity.ok(new TokenResponse(newToken, "Token 刷新成功"));
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new TokenResponse(null, "刷新失败：Token无效或已过期"));
+    }
+
+    // 4. 查看最近24小时尝试登录的信息及当前状态
+    @GetMapping("/history")
+    public ResponseEntity<List<LoginRecord>> getLoginHistory() {
+        return ResponseEntity.ok(authService.getRecentLoginHistory());
     }
 }
