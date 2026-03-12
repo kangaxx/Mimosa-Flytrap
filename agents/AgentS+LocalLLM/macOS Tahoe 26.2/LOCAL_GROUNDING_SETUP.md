@@ -16,38 +16,144 @@
 
 ---
 
-## 部署方案一：使用 vLLM (推荐)
+## 部署方案一：使用 llama.cpp 部署 GGUF (强烈推荐给 Mac 用户)
 
-`vLLM` 是目前最流行的高性能大模型推理引擎之一，且支持 Vision-Language 模型，并原生支持 Apple Silicon (MPS 框架) 和 Nvidia CUDA。
+对于 macOS (尤其是 M 系列 Apple Silicon 用户)，直接运行原生的 `vLLM` 或 `TGI` 常常会遇到算子缺失、显存支持不足或 SSL 证书问题。**使用基于 C++ 和 Metal 加速原生编译的 `llama.cpp` 是运行视觉大模型 (VLM) 效率最高、最稳妥的方法。**
 
-### 1. 安装 vLLM
+### 1. 安装 llama.cpp
 
-如果你使用 macOS (Apple Silicon)，建议在独立的虚拟环境中安装：
+如果你的 Mac 装有 Homebrew，可以直接一键安装并启用 Metal (Apple GPU) 加速的 `llama.cpp` 环境：
 ```bash
-# 激活你的 Agent 虚拟环境或创建一个新的
-source .venv/bin/activate
-
-# 安装针对 macOS/MPS 优化的 vLLM 或者是通用版本
-pip install vllm
+brew install llama.cpp
+# 这会自动安装 `llama-server` 命令行工具
 ```
 
-### 2. 启动服务
+### 2. 下载 UI-TARS 模型的 GGUF 格式
 
-使用以下命令将 `UI-TARS-1.5-7B` 部署为 OpenAI 兼容的 API 服务，默认端口为 `8000`（也可以指定 `8080`）：
+原生 HuggingFace 模型权重极大，在 Mac 上建议使用别人已经转好的 `*.gguf` 格式文件。
+你可以打开浏览器前往 HuggingFace 搜索 `UI-TARS-1.5-7B GGUF`，例如：
+* [lmstudio-community/UI-TARS-1.5-7B-GGUF](https://huggingface.co/lmstudio-community/UI-TARS-1.5-7B-GGUF) (如果社区有制作)
+实际我找到了 https://huggingface.co/Mungert/UI-TARS-1.5-7B-GGUF
+* 或者直接使用 `huggingface-cli` 下载对应尺寸的单文件（推荐 Q4_K_M 或 Q8_0 量化格式以兼顾速度与准度）
+
+将文件下载并保存在你的电脑中，如 `~/models/ui-tars-v1.5-7b-q4_k_m.gguf`。
+
+### 3. 启动 llama-server 提供 OpenAI APl 服务
+
+打开终端，使用刚刚装好的 `llama-server` 暴露一个兼容 OpenAI API 的推理端口 (我们定为 `8080` 以适配 AgentS 默认逻辑)：
 
 ```bash
-python -m vllm.entrypoints.openai.api_server \
+llama-server \
+    -m ~/models/UI-TARS-1.5-7B-q4_k_m.gguf \
+    --port 8080 \
+    --host 0.0.0.0 \
+    --ctx-size 8192 \
+    -n -1 \
+    -ngl 99 
+```
+* `-ngl 99`: 指令代表把所有的网络层都交由 Mac 的 GPU (Metal) 处理，这将极大提升推理速度。
+
+### 4. 设置 llama-server 开机自启动 (可选)
+
+如果在 Mac 上希望每次开机都能自动在后台启动这个 Grounding 服务，可以使用 macOS 自带的 `launchd` 机制：
+
+1. **创建配置文件：**
+   在终端中运行以下命令创建并极简打开配置文件：
+   ```bash
+   mkdir -p ~/Library/LaunchAgents
+   touch ~/Library/LaunchAgents/com.mimosa.llama-server.plist
+   open -e ~/Library/LaunchAgents/com.mimosa.llama-server.plist
+   ```
+
+2. **填入配置内容：**
+   将以下 XML 内容粘贴到文本编辑器中。
+   > **⚠️ 注意：你必须根据你本机的环境修改 `<array>` 内的文件路径！**
+   > * `llama-server` 需要填绝对路径（可以用 `which llama-server` 查看，通常是 `/opt/homebrew/bin/llama-server`）。
+   > * 模型也需要填绝对路径，不能用 `~`，例如要把 `YOUR_USERNAME` 换成你的用户名。
+
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+   <plist version="1.0">
+   <dict>
+       <key>Label</key>
+       <string>com.mimosa.llama-server</string>
+       <key>ProgramArguments</key>
+       <array>
+           <!-- 替换为 llama-server 的绝对路径 -->
+           <string>/opt/homebrew/bin/llama-server</string>
+           <string>-m</string>
+           <!-- 替换为模型的实际绝对路径 -->
+           <string>/Users/YOUR_USERNAME/models/UI-TARS-1.5-7B-q4_k_m.gguf</string>
+           <string>--port</string>
+           <string>8080</string>
+           <string>--host</string>
+           <string>0.0.0.0</string>
+           <string>--ctx-size</string>
+           <string>8192</string>
+           <string>-n</string>
+           <string>-1</string>
+           <string>-ngl</string>
+           <string>99</string>
+       </array>
+       <key>RunAtLoad</key>
+       <true/>
+       <key>KeepAlive</key>
+       <true/>
+       <key>StandardOutPath</key>
+       <string>/tmp/llama-server.log</string>
+       <key>StandardErrorPath</key>
+       <string>/tmp/llama-server.err</string>
+   </dict>
+   </plist>
+   ```
+
+3. **加载并使其生效：**
+   保存文件后，在终端执行以下命令加载自启项：
+   ```bash
+   launchctl load ~/Library/LaunchAgents/com.mimosa.llama-server.plist
+   ```
+   
+> **提示：**
+> 由于该服务在系统后台静默运行，如果你想实时查看其运行状况或测试日志，只需运行：
+> `tail -f /tmp/llama-server.log` 或者查看报错日志 `tail -f /tmp/llama-server.err`。  
+> 若要停止或清理：可以运行 `launchctl unload ~/Library/LaunchAgents/com.mimosa.llama-server.plist`。
+
+---
+
+## 部署方案二：使用 vLLM 或 llama.cpp 的 Python 替代方案
+
+### 重要提示：macOS/MPS 对 Vision-Language (多模态) 模型支持说明
+目前，vLLM 的 macOS (MPS) 后端对文本模型（如 Llama 3）支持良好，**但尚未完全实现对大多视觉多模态架构 (如基于 Qwen2-VL 架构的 UI-TARS) 的 MPS 全面支持。**如果在执行 vllm 命令时遇到了直接崩溃退出，通常是因为底层缺少针对 Mac 优化的多模态 CUDA 加速算子支持。
+
+此时你有两种解决方向：
+1. **使用纯 CPU (慢)：** 为 vllm 添加参数 ` --enforce-eager`。
+2. **转移到 llama.cpp (强推给 Mac 用户):** 安装编译版 llama.cpp 来使用 GGUF 格式的 UI-TARS，速度和兼容性最佳。
+
+### 【可选】vLLM 的强制启动方式
+
+使用以下命令将 `UI-TARS-1.5-7B` 部署为 API 服务。如果在 macOS 上请务必添加 `--enforce-eager` 以关闭仅限英伟达的 CUDA Graphs 优化。（也可能还需要根据报错添加 `--device cpu`）。
+
+```bash
+# 如果遇到 SSL 证书验证报错 (certificate verify failed: unable to get local issuer certificate)
+# Linux / macOS 下可临时关闭 SSL 验证：
+export CURL_CA_BUNDLE=""
+export REQUESTS_CA_BUNDLE=""
+
+python3.11 -m vllm.entrypoints.openai.api_server \
     --model ByteDance-Seed/UI-TARS-1.5-7B \
     --port 8080 \
-    --dtype auto \
+    --dtype float16 \
     --max-model-len 4096 \
-    --trust-remote-code
+    --trust-remote-code \
+    --enforce-eager \
+    --device cpu
 ```
 > **注意 (macOS)**: 首次运行会自动从 HuggingFace 自动下载模型（约 14GB+），请保证网络畅通。如果在 Mac 运行，可能会使用系统内存替代显存，请至少准备 16GB 以上的可用内存。
 
 ---
 
-## 部署方案二：使用 Hugging Face TGI (通过 Docker)
+## 部署方案三：使用 Hugging Face TGI (通过 Docker)
 
 对于 Linux 服务器或可以运行 Docker 的环境（如通过 Docker Desktop），HuggingFace 官方的 Text Generation Inference (TGI) 非常稳定。
 

@@ -3,17 +3,36 @@ set -euo pipefail
 
 echo "==> 开始安装 AgentS (通过 pip 安装)..."
 
-echo "==> 检查 Python 3.11 是否已安装..."
-if ! command -v python3.11 &> /dev/null; then
-    echo "未找到 python3.11，请先安装 Python 3.11 (例如: brew install python@3.11)"
-    exit 1
+echo "==> 准备配置 Python 虚拟环境..."
+echo "请选择创建环境的方式："
+echo "1) 使用 Python 原生的 venv (默认，推荐)"
+echo "2) 使用 Miniconda3 / Anaconda"
+read -r -p "请输入选择 [1 / 2] (直接回车默认1): " ENV_CHOICE
+
+if [[ "$ENV_CHOICE" == "2" ]]; then
+    echo "==> 检查 Conda 是否已安装..."
+    if ! command -v conda &> /dev/null; then
+        echo "未找到 conda，请先安装 Miniconda3: https://docs.conda.io/en/latest/miniconda.html"
+        exit 1
+    fi
+    echo "==> 使用 Conda 创建并激活虚拟环境 (名为 agent_s_env)..."
+    conda create -y -n agent_s_env python=3.11
+    # 初始化 conda 便于在脚本中激活
+    eval "$(conda shell.bash hook 2>/dev/null)" || true
+    conda activate agent_s_env
+    ACTIVATE_CMD="conda activate agent_s_env"
+else
+    echo "==> 检查 Python 3.11 是否已安装..."
+    if ! command -v python3.11 &> /dev/null; then
+        echo "未找到 python3.11，请先安装 Python 3.11 (例如: brew install python@3.11)"
+        exit 1
+    fi
+    echo "==> 准备安装目录: .venv"
+    echo "==> 使用 Python 3.11 创建并激活虚拟环境..."
+    python3.11 -m venv .venv
+    source .venv/bin/activate
+    ACTIVATE_CMD="source \".venv/bin/activate\""
 fi
-
-echo "==> 准备安装目录: .venv"
-
-echo "==> 使用 Python 3.11 创建并激活虚拟环境..."
-python3.11 -m venv .venv
-source .venv/bin/activate
 
 echo "==> 升级 pip 并安装 AgentS 及其依赖..."
 pip install --upgrade pip
@@ -32,7 +51,8 @@ else
 fi
 
 echo "==> AgentS 安装准备完成！"
-echo "请运行 'source \".venv/bin/activate\"' 来激活虚拟环境。"
+echo "请运行以下命令来激活虚拟环境："
+echo "   $ACTIVATE_CMD"
 echo ""
 echo "==== 关于本地 LLM 与无 Key 运行的说明 ===="
 echo "您可以通过指定本地接口来完全在本地运行 (无需 OpenAI Key)。"
