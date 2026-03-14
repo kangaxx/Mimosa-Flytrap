@@ -171,14 +171,33 @@ docker run --gpus all --shm-size 1g -p 8080:80 \
 
 ## 在 Agent-S 中接入本地 Grounding 服务
 
-当在终端看到本地服务端打出类似 `Uvicorn running on http://0.0.0.0:8080` 的日志后，即代表本地视觉定位大脑已启动。
+### 先决条件：检查模型服务是否就绪
 
-随后，您可以打开另一个终端，使用如下启动参数将接管权交给本地模型：
+在将接管权交给 `agent_s` 之前，必须确保本地的 Grounding 服务（如 `llama-server` 或 `vLLM`）已经成功启动并在监听对应端口。你可以通过以下两种方式进行验证，确认其具备接管条件：
+
+1. **检查进程状态：**
+   在终端运行 `ps aux | grep llama-server`，如果有相关的进程输出，说明服务已在后台或某个终端中存活运行。
+2. **API 接口测试（最准确）：**
+   打开一个新终端窗口，运行以下命令模拟调用接口：
+   ```bash
+   curl http://localhost:8080/v1/models
+   ```
+   如果终端能顺利返回一段包含模型名称的 JSON 数据（例如 `{"object":"list","data":[{"id":"...UI-TARS..."}]}` 或类似结构），这代表本地视觉大脑已经处于随时待命的接客状态，**完全具备了转交电脑接管权的先决条件**！
+
+> **ℹ️ 关于 API Key 的设置说明：**
+> 既然我们全程使用的是完全本地部署的 Ollama 和 llama-server 方案，**实际上并不需要真实的外部服务 API Key**。
+> 但由于 `agent_s` 库内仍可能存在基础的格式非空校验，因此在执行下面启动命令前，如果你遇到提示未设置 Key 的错误，你可以随便赋值一个假的：
+> ```bash
+> export OPENAI_API_KEY="sk-local-dummy-key"
+> ```
+
+确认就绪后，您可以运行如下命令，正式将接管权交给本地模型（由于当前 `agent_s` 原生库不直接认 `ollama` 作为推理大模型 provider 的名称，你需要把它作为类似 `openai` 的 api 对接形式处理）：
 
 ```bash
 agent_s \
-    --provider ollama \
-    --model llama3 \
+    --provider openai \
+    --model_url http://localhost:11434/v1 \
+    --model deepseek-r1:8b \
     --ground_provider openai \
     --ground_url http://localhost:8080/v1 \
     --ground_model ByteDance-Seed/UI-TARS-1.5-7B \
@@ -187,7 +206,9 @@ agent_s \
 ```
 
 ### 核心参数解析
-- `--ground_provider openai`：因为 `vLLM` 提供了兼容 OpenAI 的接口规范。如果是用 HuggingFace TGI 启动，则填 `huggingface` 和 `http://localhost:8080`。
+- `--provider openai` & `--model_url http://localhost:11434/v1`: 虽然大语言大脑我们使用的是本地的 Ollama，但在 `gui-agents` 库中并未原设对 `ollama` 这个 provider 名称的直接判断（会报不支持异常），因此我们使用它自带被支持的兼容 OpenAI 接口模式接入，通过 `--model_url` 指定到 Ollama 原生的 openai-compatible `/v1` 监听路径即可。
+- `--model deepseek-r1:8b`：这个是你运行在 Ollama 里作思考决策用的大语言模型。
+- `--ground_provider openai`：因为 `llama-server` 提供了兼容 OpenAI 的接口规范。如果是用 HuggingFace TGI 启动，则填 `huggingface` 和 `http://localhost:8080`。
 - `--ground_url http://localhost:8080/v1`：此为您刚刚部署的本地推理进程的服务地址。
 - `--ground_model`：需和你在本地 vLLM/TGI 启动时填写的 `--model` 名称保持一致。
 - `--grounding_width` & `--grounding_height`：这应该填入你当前主屏幕的**实际分辨率**。UI-TARS 将会根据此分辨率返回它推断的鼠标点击坐标，如果分辨率填错，鼠标将点不到正确的位置！
