@@ -9,33 +9,21 @@
 1. 确保您的 Spring Boot 项目已经启动（默认端口 8080）。
 2. 在您的浏览器中访问以下地址：
    - 本地开发环境：[http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
-   - 生产/服务器环境：`http://<您的服务器IP>:8080/swagger-ui/index.html`
+   - 生产/服务器环境：`http://<您的服务器IP>:8080/swagger-ui/index.html` 提示 目前服务器ip：47.100.218.196 -- http://47.100.218.196:8080/swagger-ui/index.html
 
 打开后，您将看到一个按模块分类的 RESTful API 交互界面。
 
 ## 二、测试完整的业务流程 (以账号交互为例)
 
-在我们的系统中，小程序与服务端的交互有一套极简的鉴权（Auth）体系。在 Swagger 中，您可以按照以下步骤模拟小程序的行为：
+在我们的系统中，小程序与服务端的交互有一套极简的鉴权（Auth）体系（隐式注册，首次登录即保存）。在 Swagger 中，您可以按照以下步骤模拟小程序的行为：
 
-### 第一步：注册一个测试账号
-1. 找到并展开 `POST /api/v1/auth/register` 面板。
-2. 点击右上角的 **Try it out** (尝试一下) 按钮。
-3. 在请求体 (Request body) 的 JSON 框中输入测试用的账号密码，例如：
-   ```json
-   {
-     "account": "test_mina",
-     "password": "123"
-   }
-   ```
-4. 点击 **Execute** 执行请求。如果在下面看到 `200` 响应码且返回 `账号注册成功`，说明注册完成。
-
-### 第二步：登录并获取 Token (凭据)
+### 第一步：登录并获取 Token (凭据)
 1. 展开 `POST /api/v1/auth/login` 面板，点击 **Try it out**。
-2. 输入刚刚注册的账号和密码：
+2. 在请求体参数中输入测试用的 `appid` 和 `nickname`：
    ```json
    {
-     "account": "test_mina",
-     "password": "123"
+     "appid": "wx_test_123",
+     "nickname": "测试用户"
    }
    ```
 3. 点击 **Execute**。
@@ -48,14 +36,14 @@
    ```
    **【注意】: 请将双引号里面的这串 token 字符串复制到剪贴板。**
 
-### 第三步：配置全局鉴权头 (Authorize)
+### 第二步：配置全局鉴权头 (Authorize)
 服务端要求除了注册登录外的接口，都要在请求头带上 Token。我们在 Swagger 中已经配置好了全局注入模式。
 
 1. 划到 Swagger 页面的最顶端，找到右侧带有一把绿色锁图标的 **Authorize** 按钮并点击。
 2. 在弹出的 `bearerAuth (http, Bearer)` 对话框内的 `Value` 输入框中，**粘贴您刚刚复制的 token 字符串**。（注意：直接粘贴值即可，系统会自动帮您加上 `Bearer ` 前缀并放入 Header 中）。
 3. 点击绿色的 **Authorize** 按钮保存，然后点击 Close 关闭弹窗。
 
-### 第四步：测试核心业务接口（发送与回显）
+### 第三步：测试核心业务接口（发送与回显）
 目前全局都已经带上了合法的 Token，我们可以去呼叫那些需要权限验证的接口了：
 
 1. 展开 `POST /api/v1/message/send` 面板，点击 **Try it out**。
@@ -73,7 +61,32 @@
    }
    ```
 
-## 三、相关代码说明 (仅供开发者查阅)
+## 三、使用终端 (curl) 调试 API
+
+如果您更习惯使用终端（Terminal）而不是浏览器的可视化页面，可以使用 `curl` 命令直接测试后端的 REST 接口。这也是开发自动化测试脚本时最常用的方式。
+
+### 1. 模拟登录获取 Token
+打开终端，执行以下命令登入（因为去掉了独立的注册接口，首次登入将自动保存到本地）：
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"appid": "wx_debug_888", "nickname": "终端极客"}'
+```
+*(提示：如果服务端部署在云端，请将 `localhost` 替换为外网 IP，如 `47.100.218.196`)*
+
+**执行成功后，请将返回结果中的 `token` 值复制下来，用于下一步。**
+
+### 2. 模拟发送小程序的业务消息 (需要携带 Token)
+将获取到的 Token 填入下方 `Bearer ` 之后（替换为真实的Token），验证核心业务逻辑能否连通：
+```bash
+curl -X POST http://localhost:8080/api/v1/message/send \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer 粘贴你刚才获取的TOKEN" \
+     -d '{"message": "你好，这是从终端发出来的API调试测试。"}'
+```
+如果服务端鉴权成功，系统会返回类似 `{"reply":"Server Received: 【...】 - 消息已被 Agent 接收并处理。"}`。
+
+## 四、相关代码说明 (仅供开发者查阅)
 Swagger 面板得以生成，是依赖于项目中添加的两处配置，若后续需要定制化说明可修改以下文件：
 1. **依赖库**: `build.gradle` 中引入的 `springdoc-openapi-starter-webmvc-ui`。
 2. **全局配置和鉴权头配置类**: 位于 `src/main/java/com/mimosa/server/config/SwaggerConfig.java`，定义了 API 的标题和 `Bearer Auth` 的注入策略。
