@@ -12,6 +12,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -19,6 +21,8 @@ import java.util.List;
 @RequestMapping("/api/v1/auth")
 @Tag(name = "Auth API", description = "用户认证与登录相关接口")
 public class AuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     private final AuthService authService;
 
@@ -35,6 +39,7 @@ public class AuthController {
     public ResponseEntity<TokenResponse> login(
             @Parameter(description = "包含 appid 和 nickname 的登录请求体", required = true) 
             @RequestBody AuthRequest request) {
+        log.info("接收到 /login 请求: {}", request.appid());
         String token = authService.login(request.appid(), request.nickname());
         if (token != null) {
             return ResponseEntity.ok(new TokenResponse(token, "登录成功"));
@@ -52,6 +57,7 @@ public class AuthController {
     public ResponseEntity<TokenResponse> refresh(
             @Parameter(description = "携带现有 Token 的 Authorization 头部, 格式为 'Bearer <token>'", required = false) 
             @RequestHeader(value = "Authorization", required = false) String token) {
+        log.info("接收到 /refresh 请求");
         if (token == null || !token.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new TokenResponse(null, "请求头需要传 Authorization: Bearer <token>"));
         }
@@ -69,6 +75,7 @@ public class AuthController {
     @ApiResponse(responseCode = "200", description = "成功获取历史记录列表")
     @GetMapping("/history")
     public ResponseEntity<List<LoginRecord>> getLoginHistory() {
+        log.info("接收到 /history 请求，查询最近登录历史");
         return ResponseEntity.ok(authService.getRecentLoginHistory());
     }
 }

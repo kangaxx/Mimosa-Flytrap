@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mimosa.server.model.LoginRecord;
 import com.mimosa.server.model.UserData;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,6 +20,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     // 内部登录尝试记录类
     private record LoginAttempt(String account, LocalDateTime timestamp, boolean success, String message) {}
@@ -43,9 +47,12 @@ public class AuthService {
             try {
                 Map<String, UserData> loadedUsers = objectMapper.readValue(usersFile, new TypeReference<Map<String, UserData>>() {});
                 users.putAll(loadedUsers);
+                log.info("成功从 users.json 载入 {} 个用户", loadedUsers.size());
             } catch (IOException e) {
-                System.err.println("无法读取 users.json 文件: " + e.getMessage());
+                log.error("无法读取 users.json 文件: {}", e.getMessage(), e);
             }
+        } else {
+            log.info("未找到 users.json，如果是首次启动，这很正常。");
         }
     }
 
@@ -57,15 +64,18 @@ public class AuthService {
             }
             // 使用 writerWithDefaultPrettyPrinter() 将 JSON 格式化输出（让数据可读性更好）
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(usersFile, users);
+            log.debug("成功保存配置至 users.json，共 {} 条记录", users.size());
         } catch (IOException e) {
-            System.err.println("无法写入 users.json 文件: " + e.getMessage());
+            log.error("无法写入 users.json 文件: {}", e.getMessage(), e);
         }
     }
 
     // 账号登录（如果是新账号则隐式注册）
     public String login(String appid, String nickname) {
+        log.info("收到登录请求: appid={}", appid);
         if (appid == null || appid.isBlank()) {
             loginHistory.add(new LoginAttempt("unknown", LocalDateTime.now(), false, "登录失败：appid 为空"));
+            log.warn("登录失败: appid 为空或空字符串");
             return null;
         }
 
@@ -73,13 +83,17 @@ public class AuthService {
         if (!users.containsKey(appid)) {
             String userid = UUID.randomUUID().toString();
             users.put(appid, new UserData(appid, nickname, userid));
+            log.info("新用户隐式注册成功: appid={}, nickname={}, userid={}", appid, nickname, userid);
             saveUsersToJson();
         } else {
             UserData existingUser = users.get(appid);
             // 如果昵称发生变化，更新并保存
             if (nickname != null && !nickname.equals(existingUser.nickname())) {
                 users.put(appid, new UserData(appid, nickname, existingUser.userid()));
+                log.info("检测到用户昵称变化，进行更新: oldNickname={}, newNickname={}", existingUser.nickname(), nickname);
                 saveUsersToJson();
+            } else {
+                log.debug("老用户登录: appid={}", appid);
             }
         }
 
@@ -87,6 +101,7 @@ public class AuthService {
         String token = UUID.randomUUID().toString();
         tokens.put(token, appid);
         loginHistory.add(new LoginAttempt(appid, LocalDateTime.now(), true, "登录成功"));
+        log.info("用户 {} 登录成功并颁发 Token: {}", appid, token);
         return token;
     }
 

@@ -6,10 +6,14 @@ import com.mimosa.server.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/v1/message")
 public class MessageController {
+
+    private static final Logger log = LoggerFactory.getLogger(MessageController.class);
 
     private final AuthService authService;
 
@@ -25,18 +29,23 @@ public class MessageController {
             
         // 校验 Token（鉴权）
         if (token == null || !token.startsWith("Bearer ")) {
+            log.warn("拒绝访问：未能提供有效的 Bearer Token 头部");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         
         String cleanToken = token.replace("Bearer ", "");
         if (!authService.validateToken(cleanToken)) {
+            log.warn("拒绝访问：提供的 Token 不合法或已过期 ({})", cleanToken);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+
+        log.info("鉴权通过，接收到消息内容: {}", request.message());
 
         // TODO: 这里未来可以修改为调用本地 Python Agent 的代码或者 HTTP 接口。
         // 现在作为演示，直接拼接字符串并回显给微信小程序客户端。
         String replyMessage = "Server Received: 【" + request.message() + "】 - 消息已被 Agent 接收并处理。";
         
+        log.info("服务端返回回显信息: {}", replyMessage);
         return ResponseEntity.ok(new MessageResponse(replyMessage));
     }
 }
