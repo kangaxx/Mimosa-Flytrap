@@ -40,6 +40,7 @@ chmod +x setup_ubuntu_env.sh
 ### 1️⃣ 前台高亮带日志运行（测试/排查问题专用）
 
 ```bash
+下面这段代码务必在至少8核的服务器上运行，目前99元的服务器跑不了
 java -jar build/libs/server-0.0.1-SNAPSHOT.jar
 ```
 
