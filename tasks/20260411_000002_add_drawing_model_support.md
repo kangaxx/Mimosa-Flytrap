@@ -7,7 +7,7 @@
 调整和升级现有的AI交互界面，增加对图像生成（画图）大模型的调用支持，并在前端交互界面中正确地渲染、显示生成的图像效果。
 
 ## 3. 当前状态 (Current Status)
-**Status:** Completed
+**Status:** Blocked (等待模型下载完成)
 
 ## 4. 执行记忆 (Execution Memory)
 - **2026-04-11 - 任务开启**
@@ -17,5 +17,12 @@
   - 使用 `Pillow` 为 Tkinter 的 ScrolledText 添加了内联图片显示能力（并在 `requirements.txt` 增加了对应依赖）。
   - 在 `gui_ollama_demo.py` 中实现了消息队列结构升级，现在队列可判断接收文本还是 `("IMAGE", bytes)` 元组以区分处理文字或图片数据。
   - 实现命令拦截匹配机制：当用户在提问框输入 `/imagine 提示词` 时，系统将自动调用新增的背景 `image_worker` 线程而不是标准的文本对话 `worker`。
-  - 集成了免费且免登录的测试 API `image.pollinations.ai`。由于接口独立，如果后续您改用 OpenAI DALL·E 3、Midjourney 等付费 API，只需要修改 `image_worker` 中的相应请求并返回图片二进制数据即可。
+  - 集成了免费测试 API `image.pollinations.ai` 验证了前端渲染图文混排的成功，Tkinter 完美展示了生成的图片并未卡顿。
+- **2026-04-11 - 接入本地 Ollama 绘图模型 (x/flux2-klein)**
+  - 阶段一测试通过并已完成，正式进入阶段二：对接本地实际运行的画图大模型。
+  - 用户反馈已在本地 Ollama 中拉取了模型 `x/flux2-klein`，下一步分析该模型通过 Ollama API 接口返回图片数据的格式（Base64/本地路径等），并修改 `image_worker` 以接入此本地调用链路。
+- **2026-04-11 - 任务暂停 (挂起等待)**
+  - `x/flux2-klein` 模型正在后台下载中。
+  - 暂缓修改 `image_worker` 的本地请求代码，保留目前的测试 API 以防代码中断。等待模型下载完毕后，再继续接下来的 Ollama 本地 Base64 出图解析对接。
+  
   
