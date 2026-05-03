@@ -13,8 +13,11 @@ import traceback
 from pathlib import Path
 import importlib.util
 import logging
+import io
+import urllib.request
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog
+from PIL import Image, ImageTk
 import tempfile
 import subprocess
 import os
@@ -103,17 +106,41 @@ class OllamaGUI:
         # automatic behaviours (defaults: side layout chosen earlier)
         self.auto_transcribe = True
         self.auto_speak = True
-        # last generated content (for speaking)
         self._last_generated = None
+        
+        # Keep references to images to prevent garbage collection
+        self.image_references = []
 
     def poll_queue(self):
         try:
             while True:
                 msg = self.q.get_nowait()
-                self.append_output(msg)
+                if isinstance(msg, tuple) and msg[0] == "IMAGE":
+                    self.append_image(msg[1])
+                else:
+                    self.append_output(str(msg))
         except queue.Empty:
             pass
         self.root.after(100, self.poll_queue)
+
+    def append_image(self, image_data: bytes) -> None:
+        try:
+            image = Image.open(io.BytesIO(image_data))
+            # resize to fit width
+            max_width = 800
+            if image.width > max_width:
+                ratio = max_width / image.width
+                image = image.resize((max_width, int(image.height * ratio)), Image.LANCZOS)
+            
+            photo = ImageTk.PhotoImage(image)
+            self.image_references.append(photo)
+            
+            self.output.insert(tk.END, "\n")
+            self.output.image_create(tk.END, image=photo)
+            self.output.insert(tk.END, "\n\n")
+            self.output.see(tk.END)
+        except Exception as e:
+            self.append_output(f"\n[Error rendering image: {e}]\n")
 
     def append_output(self, text: str) -> None:
         self.output.insert(tk.END, text + "\n")
@@ -133,7 +160,33 @@ class OllamaGUI:
         use_curl = bool(self.use_curl.get())
 
         self.send_btn.config(state=tk.DISABLED)
-        threading.Thread(target=self.worker, args=(prompt, model, temp, max_tokens, use_curl), daemon=True).start()
+        self.append_output(f"\nYou: {prompt}\n")
+
+        if prompt.startswith("/imagine "):
+            image_prompt = prompt[len("/imagine "):].strip()
+            self.q.put(f"Generating image for: {image_prompt} ...")
+            threading.Thread(target=self.image_worker, args=(image_prompt,), daemon=True).start()
+        else:
+            threading.Thread(target=self.worker, args=(prompt, model, temp, max_tokens, use_curl), daemon=True).start()
+
+    def image_worker(self, prompt: str) -> None:
+        try:
+            import urllib.parse
+            encoded_prompt = urllib.parse.quote(prompt)
+            url = f"https://image.pollinations.ai/prompt/{encoded_prompt}"
+            
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=30) as response:
+                image_data = response.read()
+                
+            self.q.put("=== Generated image ===")
+            self.q.put(("IMAGE", image_data))
+        except Exception as e:
+            self.q.put(f"Image generation failed: {e}")
+            self.q.put(traceback.format_exc())
+            self.q.put("---")
+        finally:
+            self.root.after(0, lambda: self.send_btn.config(state=tk.NORMAL))
 
     def worker(self, prompt: str, model: str, temperature: float, max_tokens: int, use_curl: bool) -> None:
         try:
