@@ -3,7 +3,10 @@ package com.mimosa.server.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mimosa.server.model.LoginRecord;
+import com.mimosa.server.model.UpdateUserRequest;
 import com.mimosa.server.model.UserData;
+import com.mimosa.server.utils.WechatUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +41,12 @@ public class AuthService {
     private final File usersFile = new File("users.json");
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    @Value("${wechat.appid:}")
+    private String wechatAppid;
+
+    @Value("${wechat.secret:}")
+    private String wechatSecret;
+
     public AuthService() {
         loadUsersFromJson();
     }
@@ -70,39 +79,85 @@ public class AuthService {
         }
     }
 
-    // 账号登录（如果是新账号则隐式注册）
-    public String login(String appid, String nickname) {
-        log.info("收到登录请求: appid={}", appid);
-        if (appid == null || appid.isBlank()) {
-            loginHistory.add(new LoginAttempt("unknown", LocalDateTime.now(), false, "登录失败：appid 为空"));
-            log.warn("登录失败: appid 为空或空字符串");
+    // 微信小程序登录（通过 code 获取 openid）
+    public Map<String, Object> wechatLogin(String code) {
+        log.info("收到微信登录请求：code={}", code);
+        if (code == null || code.isBlank()) {
+            loginHistory.add(new LoginAttempt("unknown", LocalDateTime.now(), false, "登录失败：code 为空"));
+            log.warn("登录失败：code 为空或空字符串");
             return null;
         }
 
-        // 隐式注册或更新信息
-        if (!users.containsKey(appid)) {
-            String userid = UUID.randomUUID().toString();
-            users.put(appid, new UserData(appid, nickname, userid));
-            log.info("新用户隐式注册成功: appid={}, nickname={}, userid={}", appid, nickname, userid);
-            saveUsersToJson();
-        } else {
-            UserData existingUser = users.get(appid);
-            // 如果昵称发生变化，更新并保存
-            if (nickname != null && !nickname.equals(existingUser.nickname())) {
-                users.put(appid, new UserData(appid, nickname, existingUser.userid()));
-                log.info("检测到用户昵称变化，进行更新: oldNickname={}, newNickname={}", existingUser.nickname(), nickname);
-                saveUsersToJson();
-            } else {
-                log.debug("老用户登录: appid={}", appid);
-            }
+        // 调用微信 code2Session 接口
+        WechatUtil.WechatSession session = WechatUtil.getSession(wechatAppid, wechatSecret, code);
+        if (session == null) {
+            loginHistory.add(new LoginAttempt("unknown", LocalDateTime.now(), false, "登录失败：微信 code2Session 失败"));
+            log.error("微信 code2Session 失败");
+            return null;
         }
 
-        // 生成唯一的 Token
+        String openid = session.getOpenid();
+        log.info("微信 code2Session 成功：openid={}", openid);
+
+        // 新用户注册或老用户登录
+        UserData existingUser = users.get(openid);
+        if (existingUser == null) {
+            String userid = UUID.randomUUID().toString();
+            UserData newUser = new UserData(openid, "微信用户", userid, null, null, System.currentTimeMillis(), System.currentTimeMillis());
+            users.put(openid, newUser);
+            log.info("新用户注册成功：openid={}, userid={}", openid, userid);
+            saveUsersToJson();
+            existingUser = newUser;
+        } else {
+            log.debug("老用户登录：openid={}", openid);
+        }
+
+        // 生成 Token
         String token = UUID.randomUUID().toString();
-        tokens.put(token, appid);
-        loginHistory.add(new LoginAttempt(appid, LocalDateTime.now(), true, "登录成功"));
-        log.info("用户 {} 登录成功并颁发 Token: {}", appid, token);
-        return token;
+        tokens.put(token, openid);
+        loginHistory.add(new LoginAttempt(openid, LocalDateTime.now(), true, "登录成功"));
+        log.info("用户 {} 登录成功并颁发 Token: {}", openid, token);
+        
+        // 构建返回数据
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("token", token);
+        result.put("openid", openid);
+        result.put("nickName", existingUser.nickname());
+        result.put("avatarUrl", existingUser.avatarUrl());
+        
+        return result;
+    }
+
+    // 更新用户信息
+    public boolean updateUser(String appid, UpdateUserRequest request) {
+        if (!users.containsKey(appid)) {
+            log.warn("用户不存在：{}", appid);
+            return false;
+        }
+
+        UserData user = users.get(appid);
+        String newNickname = request.nickname() != null ? request.nickname() : user.nickname();
+        String newAvatar = request.avatarUrl() != null ? request.avatarUrl() : user.avatarUrl();
+        Integer newGender = request.gender() != null ? request.gender() : user.gender();
+
+        users.put(appid, new UserData(
+            appid, newNickname, user.userid(), newAvatar, newGender,
+            user.createTime(), System.currentTimeMillis()
+        ));
+
+        saveUsersToJson();
+        log.info("用户信息更新成功：appid={}", appid);
+        return true;
+    }
+
+    // 根据 Token 获取 appid
+    public String getAppidByToken(String token) {
+        return tokens.get(token);
+    }
+
+    // 根据 appid 获取用户信息
+    public UserData getUserByAppid(String appid) {
+        return users.get(appid);
     }
 
     // 3. 刷新 Token

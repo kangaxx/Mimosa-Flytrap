@@ -1,12 +1,38 @@
 {
+  "app_12345678" : {
+    "appid" : "app_12345678",
+    "nickname" : "微信用户2",
+    "userid" : "a0d50f9e-ffd4-4beb-bbee-1038c33331a5",
+    "avatarUrl" : null,
+    "gender" : null,
+    "createTime" : null,
+    "updateTime" : null
+  },
   "wx_debug_888" : {
     "appid" : "wx_debug_888",
     "nickname" : "终端极客",
-    "userid" : "298a1c7d-7a58-4a5c-b0a8-d49c5aea2632"
+    "userid" : "298a1c7d-7a58-4a5c-b0a8-d49c5aea2632",
+    "avatarUrl" : null,
+    "gender" : null,
+    "createTime" : null,
+    "updateTime" : null
+  },
+  "oLXJY12gCHUzDAtnqL6b5G2f5oGM" : {
+    "appid" : "oLXJY12gCHUzDAtnqL6b5G2f5oGM",
+    "nickname" : "老子123",
+    "userid" : "4c4adc10-7de2-45e8-bdd6-e0dff2acb795",
+    "avatarUrl" : "http://tmp/bnUCAOahTVQgbae0058442c455dfc7b65cd3983193d4.jpeg",
+    "gender" : null,
+    "createTime" : 1773974597020,
+    "updateTime" : 1773987949145
   },
   "app_123456" : {
     "appid" : "app_123456",
     "nickname" : "微信用户",
-    "userid" : "9fafa724-6cec-459f-9126-697cb2bc3e79"
+    "userid" : "9fafa724-6cec-459f-9126-697cb2bc3e79",
+    "avatarUrl" : null,
+    "gender" : null,
+    "createTime" : null,
+    "updateTime" : null
   }
 }

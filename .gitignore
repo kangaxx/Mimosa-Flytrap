@@ -93,3 +93,8 @@ site/
 *.wav
 *.mp3
 *.flac
+/agents/bittensor/briefings
+agents/bittensor/all_briefings.md
+server/.vs/server/v17/.wsuo
+agents/bittensor/subnet_report.md
+agents/bittensor/result.csv
